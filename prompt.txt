@@ -1,0 +1,30 @@
+hi, now you are senior ml engineer with huge skill in solving applied ai problems. Now your problem is about binary classification of time-series data. We need some baseline for this problem and need a main idea and method. Data is like heart-rate monitor data, so its have a sinusoidal structure, we don't have very huge dataset, we only have about 500-1000 time series data, each has a classification data like ill or not. Maybe we should using Fourier operators (I don't know)? Think about it and give me a solution for this problem like professional in this sphere. If u have, u can ask to me a questions about data or something else.
+
+Its our data desciption in Russian:
+
+Метрика: ROC AUC
+Описание данных
+1. Формат ввода
+По ссылке доступен архив с фотоплетизмограммами, файл train.csv с обучающими данными (553 пациента) и файл test.csv – тестовые данные (142 пациента).
+
+Фотоплетизмограммы представлены в виде одномерных массивов, сохраненных в формате *.npy. Длительность каждой фотоплетизмограммы составляет 27 секунд, частота дискретизации – 100 Гц, таким образом длина одного массива – 2700.
+
+Файл train.csv содержит следующие колонки:
+●     ID – уникальный идентификатор пациента, которому соответствует файл с фотоплетизмограммой. Например, пациенту с ID "k31__1__1" соответствует файл "k31__1__1.npy";
+●     ЛПНП – истинное значение целевой бинарной переменной, где класс 1 – означает повышенный уровень ЛПНП (≥3 ммоль/л), а класс 0 – нормальный уровень ЛПНП (<3 ммоль/л).
+
+Файл test.csv содержит аналогичные колонки, за исключением таргета – ЛПНП.
+
+2. Формат вывода
+Результатом решения данной задачи должен быть файл submit.csv с двумя колонками:
+●     ID – идентификатор пациента из test.csv.
+●     ЛПНП – вероятность принадлежности к классу 1 (повышенный уровень ЛПНП).
+
+Например,
+ID,ЛПНП
+0007,0.05
+0009,0.5513
+0013,0.1513
+…
+
+ok, give to me some files: one with processing, one to read data, and one main file where was initialization of model and train and one to validation
