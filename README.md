@@ -1,8 +1,8 @@
-### PPG-Based LDL Classification - Baseline Solution
+### Repository of the MIPT 2025 Hackathon's team "The piglets rubbed each other's backs" 
 
 ```
-git clone https://github.com/yourusername/ldl-classification.git
-cd ldl-classification
+git clone https://github.com/...
+cd pigs_mipt_2025_hackathon
 ```
 
 ---
@@ -38,38 +38,10 @@ ldl-classification/
 ├── model/               # Trained model weights
 │   └── best_model.pth
 │
-├── baseline.ipynb       # Main solution notebook
+├── first_try.ipynb      # Solution notebook from Deepseek and Linar
+├── baseline.ipynb       # Baseline solution notebook from Sber
 └── requirements.txt     # Python dependencies
 ```
-
----
-
-### Requirements
-```txt
-# requirements.txt
-numpy==1.23.5
-pandas==1.5.3
-torch==2.0.1
-scipy==1.10.1
-scikit-learn==1.2.2
-matplotlib==3.7.1
-tqdm==4.65.0
-```
-
----
-
-### Execution Workflow
-1. **Prepare environment** (as above)
-2. **Launch Jupyter**:
-   ```bash
-   jupyter notebook
-   ```
-3. **Run baseline notebook**:
-   - Open `baseline.ipynb`
-   - Execute all cells sequentially
-4. **Results will be saved to**:
-   - Model weights: `model/best_model.pth`
-   - Submission file: `outputs/baseline_submit.csv`
 
 ---
 
