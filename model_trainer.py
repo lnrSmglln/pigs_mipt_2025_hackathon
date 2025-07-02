@@ -20,7 +20,7 @@ def create_model():
             max_depth=3, 
             learning_rate=0.1,
             reg_lambda=1.0,
-            use_label_encoder=False,
+            # use_label_encoder=False,
             eval_metric='logloss'
         )),
         ('svm', SVC(
