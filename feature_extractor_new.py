@@ -3,7 +3,6 @@ from scipy.signal import find_peaks, welch, butter, filtfilt, argrelextrema
 from scipy.fft import rfft, rfftfreq
 from scipy import stats, signal
 import pandas as pd
-from scipy.integrate import simpson as simps  # Заменяем устаревший импорт
 from scipy.stats import entropy
 from data_loader import preprocess_signal
 
@@ -13,7 +12,7 @@ def extract_pulse_features(signal, fs=100, peaks=None):
         peaks, _ = find_peaks(signal, distance=fs*0.6, prominence=0.5)
     
     if len(peaks) < 3:
-        return {k: 0 for k in ['pulse_amp', 'crest_time', 'half_width', 'aug_index', 'pulse_rise_time', 'pulse_decay_time']}
+        return {k: 0 for k in ['pulse_amp', 'crest_time', 'half_width', 'aug_index', 'pulse_rise_time', 'pulse_decay_time', 'pulse_asymmetry']}
     
     # Extract individual pulses
     pulse_waves = []
@@ -41,6 +40,10 @@ def extract_pulse_features(signal, fs=100, peaks=None):
     decay_end = np.where(avg_pulse[max_idx:] > min_val + 0.1*(max_val-min_val))[0]
     decay_time = (decay_end[-1] - decay_start[0]) / fs if len(decay_start) > 0 and len(decay_end) > 0 else 0
     
+    # Handle potential NaN in pulse_asymmetry
+    total_time = rise_time + decay_time
+    pulse_asymmetry = rise_time / total_time if total_time > 0 else 0
+    
     return {
         'pulse_amp': max_val - min_val,
         'crest_time': max_idx / fs,
@@ -48,7 +51,7 @@ def extract_pulse_features(signal, fs=100, peaks=None):
         'aug_index': (avg_pulse[-1] - avg_pulse[0]) / (max_val - min_val),
         'pulse_rise_time': rise_time,
         'pulse_decay_time': decay_time,
-        'pulse_asymmetry': rise_time / (rise_time + decay_time) if (rise_time + decay_time) > 0 else 0
+        'pulse_asymmetry': pulse_asymmetry
     }
 
 def extract_beat_features(signal, fs=100, peaks=None):
@@ -66,6 +69,8 @@ def extract_beat_features(signal, fs=100, peaks=None):
         'slope': 0,
         'area': np.trapz(signal),
         'std_amp': np.std(signal),
+        'systolic_diastolic_ratio': 1.0,  # Default ratio
+        'beat_entropy': 0.0  # Default entropy
     }
     
     if len(peaks) < 3:
@@ -90,14 +95,20 @@ def extract_beat_features(signal, fs=100, peaks=None):
             slope = (beat_max - beat_min) / (len(beat) + 1e-6)
             
             # Find systolic and diastolic peaks
+            systolic_diastolic_ratio = 1.0  # Default value
             if len(beat) > 20:
                 # Find local maxima (potential diastolic peak)
                 maxima = argrelextrema(beat, np.greater)[0]
-                diastolic_peak = maxima[-1] if len(maxima) > 0 and maxima[-1] > len(beat)*0.5 else len(beat)-1
-                systolic_diastolic_ratio = beat_max / beat[diastolic_peak] if diastolic_peak > 0 else 1.0
-            else:
-                diastolic_peak = len(beat)-1
-                systolic_diastolic_ratio = 1.0
+                if len(maxima) > 0:
+                    diastolic_peak = maxima[-1] if maxima[-1] > len(beat)*0.5 else len(beat)-1
+                    # Prevent division by zero and handle small values
+                    if beat[diastolic_peak] > 1e-6:
+                        systolic_diastolic_ratio = beat_max / beat[diastolic_peak]
+            
+            # Calculate beat entropy safely
+            hist, _ = np.histogram(beat, bins=10)
+            hist_sum = np.sum(hist)
+            beat_entropy_val = entropy(hist) if hist_sum > 0 and len(hist[hist > 0]) > 1 else 0
             
             beat_features.append({
                 'mean_amp': np.nanmean(beat),
@@ -109,9 +120,11 @@ def extract_beat_features(signal, fs=100, peaks=None):
                 'area': np.trapz(beat) if len(beat)>1 else 0,
                 'std_amp': np.nanstd(beat) if len(beat)>1 else 0,
                 'systolic_diastolic_ratio': systolic_diastolic_ratio,
-                'beat_entropy': entropy(np.histogram(beat, bins=10)[0])
+                'beat_entropy': beat_entropy_val
             })
-        except:
+        except Exception as e:
+            # Fallback to default values on error
+            print(f"Error processing beat: {e}")
             beat_features.append(default_beat_features)
     
     # Convert to DataFrame with robust aggregation
@@ -145,7 +158,7 @@ def extract_beat_features(signal, fs=100, peaks=None):
         elif agg_method == 'sum':
             agg_features[col] = df_beat[col].sum(skipna=True)
         
-        # Final NaN check - fallback to signal-wide stats
+        # Final NaN check - fallback to default
         if pd.isna(agg_features[col]):
             agg_features[col] = default_beat_features.get(col, 0)
     
@@ -392,32 +405,50 @@ def extract_features(signal, fs=100):
         'skew': stats.skew(preprocessed),
         'kurtosis': stats.kurtosis(preprocessed),
         'rms': np.sqrt(np.mean(preprocessed**2)),
-        'perfusion_index': np.ptp(preprocessed) / np.mean(preprocessed),
-        'autocorr_peak': np.correlate(preprocessed, preprocessed, mode='full')[len(preprocessed)] / np.max(preprocessed)
+        'perfusion_index': np.ptp(preprocessed) / np.mean(preprocessed) if np.mean(preprocessed) > 0 else 0,
+        'autocorr_peak': np.correlate(preprocessed, preprocessed, mode='full')[len(preprocessed)] / (np.max(preprocessed) + 1e-12)
     })
     
     # Pulse waveform features
-    features.update(extract_pulse_features(preprocessed, fs, peaks))
+    pulse_features = extract_pulse_features(preprocessed, fs, peaks)
+    features.update(pulse_features)
     
     # Beat features
-    features.update(extract_beat_features(preprocessed, fs, peaks))
+    beat_features = extract_beat_features(preprocessed, fs, peaks)
+    features.update(beat_features)
     
     # HRV features
-    features.update(extract_hrv_features(peaks, fs))
+    hrv_features = extract_hrv_features(peaks, fs)
+    features.update(hrv_features)
     
     # Gradient features
-    features.update(extract_gradient_features(preprocessed))
+    grad_features = extract_gradient_features(preprocessed)
+    features.update(grad_features)
     
     # Frequency features
-    features.update(extract_freq_features(preprocessed, fs))
+    freq_features = extract_freq_features(preprocessed, fs)
+    features.update(freq_features)
     
     # Wavelet features
-    features.update(extract_wavelet_features(preprocessed, fs))
+    wavelet_features = extract_wavelet_features(preprocessed, fs)
+    features.update(wavelet_features)
     
     # Nonlinear features
-    features.update(extract_nonlinear_features(preprocessed))
+    nonlinear_features = extract_nonlinear_features(preprocessed)
+    features.update(nonlinear_features)
     
-    # Post-processing: Handle NaNs and infs
+    # Post-processing: Handle NaNs and infs in specific features
+    critical_features = [
+        'beat_systolic_diastolic_ratio',
+        'beat_entropy',
+        'pulse_asymmetry'
+    ]
+    
+    for feature in critical_features:
+        if feature in features and not np.isfinite(features[feature]):
+            features[feature] = 0
+    
+    # General NaN handling for all features
     for key in list(features.keys()):
         if not np.isfinite(features[key]):
             features[key] = 0
