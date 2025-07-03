@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
 *.py[cod]
-*.npy
 *.pth
 .ipynb_checkpoints/
