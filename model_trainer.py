@@ -16,11 +16,10 @@ def create_model():
     """Create stacked ensemble model"""
     base_models = [
         ('xgb', XGBClassifier(
-            n_estimators=200, 
-            max_depth=12, 
+            n_estimators=380,
+            max_depth=12,
             learning_rate=0.1,
             reg_lambda=1.0,
-            # use_label_encoder=False,
             eval_metric='logloss'
         )),
         ('svm', SVC(
