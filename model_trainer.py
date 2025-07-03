@@ -16,17 +16,17 @@ def create_model():
     """Create stacked ensemble model"""
     base_models = [
         ('xgb', XGBClassifier(
-            n_estimators=365,
+            n_estimators=410,
             max_depth=12,
             learning_rate=0.1,
-            reg_lambda=0.99,
+            reg_lambda=1.0,
             eval_metric='logloss'
         )),
         ('svm', SVC(
             C=0.5, 
             kernel='rbf', 
             probability=True,
-            random_state=5
+            random_state=42
         ))
     ]
     
@@ -34,7 +34,7 @@ def create_model():
         estimators=base_models,
         final_estimator=LogisticRegression(
             penalty='l2', 
-            C=0.1, 
+            C=0.5, 
             solver='liblinear',
             random_state=42
         ),
