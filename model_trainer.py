@@ -16,8 +16,8 @@ def create_model():
     """Create stacked ensemble model"""
     base_models = [
         ('xgb', XGBClassifier(
-            n_estimators=150, 
-            max_depth=3, 
+            n_estimators=200, 
+            max_depth=12, 
             learning_rate=0.1,
             reg_lambda=1.0,
             # use_label_encoder=False,
@@ -27,7 +27,7 @@ def create_model():
             C=0.5, 
             kernel='rbf', 
             probability=True,
-            random_state=42
+            random_state=5
         ))
     ]
     
